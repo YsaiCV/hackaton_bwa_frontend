@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 import '../widgets/custom_header.dart';
 import '../models/chat_message.dart';
@@ -223,7 +225,10 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
     }
 
     if (message.procedureData != null) {
-      return ProcedureCard(data: message.procedureData!);
+      return Text(
+        message.text.isNotEmpty ? message.text : 'Aquí está la información del trámite solicitada:',
+        style: const TextStyle(fontSize: 14.5, color: Color(0xFF001B4D)),
+      );
     }
 
     if (message.finalResult != null) {
@@ -377,57 +382,112 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   }
 
   Widget _buildChatBubble(ChatMessage message) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Row(
-        mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!message.isUser) ...[
-            Container(
-              margin: const EdgeInsets.only(right: 8, bottom: 4),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  'assets/images/app-icono-yase.png',
-                  width: 28,
-                  height: 28,
-                  fit: BoxFit.cover,
-                ),
+    if (message.isUser) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 280),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0047D7),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(22),
+                topRight: Radius.circular(6),
+                bottomLeft: Radius.circular(22),
+                bottomRight: Radius.circular(22),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: message.isUser ? const Color(0xFF0047C7) : const Color(0xFFF5F8FC),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(20),
-                  topRight: const Radius.circular(20),
-                  bottomLeft: Radius.circular(message.isUser ? 20 : 0),
-                  bottomRight: Radius.circular(message.isUser ? 0 : 20),
-                ),
-                boxShadow: [
-                  if (!message.isUser)
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                ],
+            child: Text(
+              message.text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
               ),
-              child: message.isUser 
-                  ? Text(
-                      message.text,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                    )
-                  : _buildBotMessageContent(message),
             ),
           ),
-        ],
-      ),
-    );
+        ),
+      );
+    } else {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF00B8B8),
+                    shape: BoxShape.circle,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      'assets/images/app-icono-yase.png',
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: const Color(0xFFDFE8F5),
+                        width: 1.5,
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                        bottomLeft: Radius.circular(4),
+                        bottomRight: Radius.circular(20),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: _buildBotMessageContent(message),
+                  ),
+                ),
+              ],
+            ),
+            if (message.procedureData != null) ...[
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(left: 40),
+                child: ProcedureCard(
+                  data: message.procedureData!,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
   }
 
   bool _isSidebarOpenDesktop = true;
@@ -491,6 +551,10 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
             const Divider(),
             _buildDrawerItem('Configuración', icon: Icons.settings),
             _buildDrawerItem('Ayuda', icon: Icons.help_outline),
+            const Divider(),
+            _buildDrawerItem('Cerrar sesión', icon: Icons.logout, onTapAction: () async {
+              await FirebaseAuth.instance.signOut();
+            }),
             const SizedBox(height: 16),
           ],
         ),
@@ -498,7 +562,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
     );
   }
 
-  Widget _buildDrawerItem(String title, {IconData? icon}) {
+  Widget _buildDrawerItem(String title, {IconData? icon, VoidCallback? onTapAction}) {
     return ListTile(
       leading: Icon(icon ?? Icons.chat_bubble_outline, size: 20, color: const Color(0xFF003C9E)),
       title: Text(
@@ -510,6 +574,9 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
       onTap: () {
         if (MediaQuery.of(context).size.width < 800) {
           Navigator.pop(context);
+        }
+        if (onTapAction != null) {
+          onTapAction();
         }
       },
     );

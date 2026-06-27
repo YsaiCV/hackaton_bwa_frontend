@@ -40,6 +40,9 @@ dependencies:
   open_file: ^4.0.0
   universal_html: ^2.3.0
   syncfusion_flutter_pdfviewer: ^33.2.15
+  firebase_core: ^4.11.0
+  firebase_auth: ^6.5.4
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:

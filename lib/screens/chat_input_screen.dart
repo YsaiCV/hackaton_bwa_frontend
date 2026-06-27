@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/custom_header.dart';
 import '../models/chat_message.dart';
+import '../widgets/procedure_card.dart';
 
 class ChatInputScreen extends StatefulWidget {
   const ChatInputScreen({super.key});
@@ -18,6 +19,11 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+  }
   
   void _startStreaming() {
     if (_queryController.text.trim().isEmpty) return;
@@ -160,6 +166,10 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
         message.error!,
         style: const TextStyle(color: Colors.red, fontSize: 16),
       );
+    }
+
+    if (message.procedureData != null) {
+      return ProcedureCard(data: message.procedureData!);
     }
 
     if (message.finalResult != null) {

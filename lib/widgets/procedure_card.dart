@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/documents_service.dart';
 
 class ProcedureData {
   final String title;
@@ -38,204 +39,271 @@ class ProcedureData {
   });
 }
 
-class ProcedureCard extends StatelessWidget {
+class ProcedureCard extends StatefulWidget {
   final ProcedureData data;
   final VoidCallback onTap;
 
   const ProcedureCard({super.key, required this.data, required this.onTap});
 
   @override
+  State<ProcedureCard> createState() => _ProcedureCardState();
+}
+
+class _ProcedureCardState extends State<ProcedureCard> {
+  final DocumentsService _documentsService = DocumentsService();
+  bool _isDownloading = false;
+  bool _isSharing = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8.0),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header azul
-          Container(
-            padding: const EdgeInsets.all(20),
-            color: const Color(0xFF0047C7), // Azul profundo de la paleta
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      alignment: Alignment.center,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          'assets/images/app-icono-yase.png',
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.cover,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header azul
+            Container(
+              padding: const EdgeInsets.all(20),
+              color: const Color(0xFF0047C7), // Azul profundo de la paleta
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        alignment: Alignment.center,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            'assets/images/app-icono-yase.png',
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            data.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              height: 1.2,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.data.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                height: 1.2,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: onTap,
-                            behavior: HitTestBehavior.opaque,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '¿Qué es este trámite?',
-                                  style: TextStyle(
-                                    color: const Color(0xFF00B8B8).withValues(alpha: 0.9),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: widget.onTap,
+                              behavior: HitTestBehavior.opaque,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '¿Qué es este trámite?',
+                                    style: TextStyle(
+                                      color: const Color(0xFF00B8B8).withValues(alpha: 0.9),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.chevron_right,
-                                  color: const Color(0xFF00B8B8).withValues(alpha: 0.9),
-                                  size: 16,
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    color: const Color(0xFF00B8B8).withValues(alpha: 0.9),
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.account_balance, color: Colors.white70, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    widget.data.institution,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(Icons.account_balance, color: Colors.white70, size: 16),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  data.institution,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _buildChip(Icons.attach_money, data.cost),
-                    _buildChip(Icons.access_time, data.time),
-                    _buildChip(Icons.language, data.modality),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // Secciones desplegables (Tarjeta Resumen - Max 3 pasos visibles)
-          _buildExpansionTile(
-            title: 'Pasos principales',
-            subtitle: '${data.steps.length} pasos',
-            icon: Icons.description_outlined,
-            children: data.steps.length > 3
-                ? data.steps.take(3).map((s) => _buildListItem(s)).toList()
-                : data.steps.map((s) => _buildListItem(s)).toList(),
-          ),
-          // Botones PDF y WhatsApp (absorbiendo tap para evitar abrir modal)
-          GestureDetector(
-            onTap: () {}, // Evita propagación al parent card
-            child: Padding(
-              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Descargando guía PDF...')),
-                        );
-                      },
-                      icon: const Icon(Icons.download_rounded, color: Colors.white, size: 18),
-                      label: const Text(
-                        'Descargar PDF',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0047D7),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Compartiendo por WhatsApp...')),
-                        );
-                      },
-                      icon: const Icon(Icons.share, color: Colors.white, size: 18),
-                      label: const Text(
-                        'WhatsApp',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                    ),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _buildChip(Icons.attach_money, widget.data.cost),
+                      _buildChip(Icons.access_time, widget.data.time),
+                      _buildChip(Icons.language, widget.data.modality),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            
+            // Secciones desplegables (Tarjeta Resumen - Max 3 pasos visibles)
+            _buildExpansionTile(
+              title: 'Pasos principales',
+              subtitle: '${widget.data.steps.length} pasos',
+              icon: Icons.description_outlined,
+              children: widget.data.steps.length > 3
+                  ? widget.data.steps.take(3).map((s) => _buildListItem(s)).toList()
+                  : widget.data.steps.map((s) => _buildListItem(s)).toList(),
+            ),
+            // Botones PDF y WhatsApp (absorbiendo tap para evitar abrir modal)
+            GestureDetector(
+              onTap: () {}, // Evita propagación al parent card
+              child: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: (_isDownloading || _isSharing)
+                            ? null
+                            : () async {
+                                setState(() {
+                                  _isDownloading = true;
+                                });
+                                try {
+                                  await _documentsService.downloadProcedurePdf(widget.data);
+                                } catch (e) {
+                                  if (mounted) {
+                                    // ignore: use_build_context_synchronously
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('No se pudo descargar el PDF. Intenta nuevamente.'),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      _isDownloading = false;
+                                    });
+                                  }
+                                }
+                              },
+                        icon: _isDownloading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.download_rounded, color: Colors.white, size: 18),
+                        label: Text(
+                          _isDownloading ? 'Descargando...' : 'Descargar PDF',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0047D7),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: (_isDownloading || _isSharing)
+                            ? null
+                            : () async {
+                                setState(() {
+                                  _isSharing = true;
+                                });
+                                try {
+                                  await _documentsService.shareProcedureToWhatsApp(widget.data);
+                                } catch (e) {
+                                  if (mounted) {
+                                    // ignore: use_build_context_synchronously
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('No se pudo abrir WhatsApp.'),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      _isSharing = false;
+                                    });
+                                  }
+                                }
+                              },
+                        icon: _isSharing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.share, color: Colors.white, size: 18),
+                        label: Text(
+                          _isSharing ? 'Abriendo...' : 'WhatsApp',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildChip(IconData icon, String label) {
     return Container(

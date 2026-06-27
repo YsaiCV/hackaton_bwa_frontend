@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/documents_service.dart';
 import '../models/chat_message.dart';
 import '../widgets/procedure_card.dart';
 import '../widgets/procedure_detail_sheet.dart';
@@ -23,6 +24,7 @@ class BotStep {
 class _ChatInputScreenState extends State<ChatInputScreen> {
   final TextEditingController _queryController = TextEditingController();
   final ApiService _apiService = ApiService();
+  final DocumentsService _documentsService = DocumentsService();
   bool _isLoading = false;
   bool _isChatMode = false;
   bool _showProcedureDetail = false;
@@ -33,6 +35,10 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   String _historySearchQuery = '';
   final TextEditingController _historySearchController = TextEditingController();
   final List<bool> _docChecked = [true, true, false, false, false, false];
+  bool _isFichaDownloading = false;
+  bool _isFichaSharing = false;
+  bool _isChecklistDownloading = false;
+  bool _isChecklistSharing = false;
   final List<String> _docTitles = [
     'Carnet de Identidad (original)',
     'Fotocopia del Carnet de Identidad',
@@ -1046,12 +1052,45 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: IconButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Descargando ficha completa...')),
-                            );
-                          },
-                          icon: const Icon(Icons.download_rounded, color: Color(0xFF00B8B8)),
+                          onPressed: (_isFichaDownloading || _isFichaSharing)
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _isFichaDownloading = true;
+                                  });
+                                  try {
+                                    final procData = _selectedProcedureData ?? _getMockProcedureData();
+                                    await _documentsService.downloadProcedurePdf(procData);
+                                  } catch (e) {
+                                    if (mounted) {
+                                      // ignore: use_build_context_synchronously
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('No se pudo descargar el PDF. Intenta nuevamente.'),
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isFichaDownloading = false;
+                                      });
+                                    }
+                                  }
+                                },
+                          icon: _isFichaDownloading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(4.0),
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF00B8B8),
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.download_rounded, color: Color(0xFF00B8B8)),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1062,12 +1101,45 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: IconButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Compartiendo ficha...')),
-                            );
-                          },
-                          icon: const Icon(Icons.share, color: Color(0xFF00B8B8)),
+                          onPressed: (_isFichaDownloading || _isFichaSharing)
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _isFichaSharing = true;
+                                  });
+                                  try {
+                                    final procData = _selectedProcedureData ?? _getMockProcedureData();
+                                    await _documentsService.shareProcedureToWhatsApp(procData);
+                                  } catch (e) {
+                                    if (mounted) {
+                                      // ignore: use_build_context_synchronously
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('No se pudo abrir WhatsApp.'),
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isFichaSharing = false;
+                                      });
+                                    }
+                                  }
+                                },
+                          icon: _isFichaSharing
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(4.0),
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF00B8B8),
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.share, color: Color(0xFF00B8B8)),
                         ),
                       ),
                     ],
@@ -2119,15 +2191,45 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Descargando checklist PDF...')),
-                            );
-                          },
-                          icon: const Icon(Icons.download_rounded, color: Colors.white, size: 18),
-                          label: const Text(
-                            'Descargar PDF',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          onPressed: (_isChecklistDownloading || _isChecklistSharing)
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _isChecklistDownloading = true;
+                                  });
+                                  try {
+                                    final procData = _selectedProcedureData ?? _getMockProcedureData();
+                                    await _documentsService.downloadProcedurePdf(procData);
+                                  } catch (e) {
+                                    if (mounted) {
+                                      // ignore: use_build_context_synchronously
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('No se pudo descargar el PDF. Intenta nuevamente.'),
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isChecklistDownloading = false;
+                                      });
+                                    }
+                                  }
+                                },
+                          icon: _isChecklistDownloading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.download_rounded, color: Colors.white, size: 18),
+                          label: Text(
+                            _isChecklistDownloading ? 'Descargando...' : 'Descargar PDF',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0047C7),
@@ -2141,15 +2243,45 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Compartiendo checklist por WhatsApp...')),
-                            );
-                          },
-                          icon: const Icon(Icons.share, color: Color(0xFF00B8B8), size: 18),
-                          label: const Text(
-                            'WhatsApp',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          onPressed: (_isChecklistDownloading || _isChecklistSharing)
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _isChecklistSharing = true;
+                                  });
+                                  try {
+                                    final procData = _selectedProcedureData ?? _getMockProcedureData();
+                                    await _documentsService.shareProcedureToWhatsApp(procData);
+                                  } catch (e) {
+                                    if (mounted) {
+                                      // ignore: use_build_context_synchronously
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('No se pudo abrir WhatsApp.'),
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isChecklistSharing = false;
+                                      });
+                                    }
+                                  }
+                                },
+                          icon: _isChecklistSharing
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFF00B8B8),
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.share, color: Color(0xFF00B8B8), size: 18),
+                          label: Text(
+                            _isChecklistSharing ? 'Abriendo...' : 'WhatsApp',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                           ),
                           style: OutlinedButton.styleFrom(
                             backgroundColor: Colors.white,

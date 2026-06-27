@@ -28,6 +28,10 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   bool _showProcedureDetail = false;
   ProcedureData? _selectedProcedureData;
   int _currentTab = 1;
+  int _homeActiveTab = 0;
+  int _historyActiveTab = 0;
+  String _historySearchQuery = '';
+  final TextEditingController _historySearchController = TextEditingController();
   final List<bool> _docChecked = [true, true, false, false, false, false];
   final List<String> _docTitles = [
     'Carnet de Identidad (original)',
@@ -898,6 +902,995 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
     );
   }
 
+  Widget _buildHomeView() {
+    return Expanded(
+      child: Column(
+        children: [
+          // Blue panel header
+          Container(
+            width: double.infinity,
+            color: const Color(0xFF0047C7),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      alignment: Alignment.center,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          'assets/images/app-icono-yase.png',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Impuesto municipal a la propiedad de bienes inmuebles',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.bold,
+                              height: 1.25,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Gobierno Autónomo Municipal de La Paz',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildHomeChip(Icons.place_outlined, 'La Paz'),
+                    _buildHomeChip(Icons.attach_money, 'Bs. 100–500'),
+                    _buildHomeChip(Icons.access_time, '1 día'),
+                    _buildHomeChip(Icons.language, 'Presencial / Virtual'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Tab Selector (Requisitos / Pasos / Tips)
+          Container(
+            color: const Color(0xFFF3F7FE),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.all(2),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildHomeTabButton('Requisitos', 0),
+                  ),
+                  Expanded(
+                    child: _buildHomeTabButton('Pasos', 1),
+                  ),
+                  Expanded(
+                    child: _buildHomeTabButton('Tips', 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Tab Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHomeTabContent(),
+                  const SizedBox(height: 24),
+                  // Actions Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _currentTab = 2; // Docs
+                            });
+                          },
+                          icon: const Icon(Icons.assignment_outlined, color: Colors.white, size: 18),
+                          label: const Text(
+                            'Ver Checklist',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0047C7),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Descargando ficha completa...')),
+                            );
+                          },
+                          icon: const Icon(Icons.download_rounded, color: Color(0xFF00B8B8)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Compartiendo ficha...')),
+                            );
+                          },
+                          icon: const Icon(Icons.share, color: Color(0xFF00B8B8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Footer
+                  const Center(
+                    child: Text(
+                      'Actualizado: junio 2025 · Fuente: GAMLP',
+                      style: TextStyle(
+                        color: Color(0xFF8DA0A5),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 13),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeTabButton(String text, int index) {
+    final isActive = _homeActiveTab == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _homeActiveTab = index;
+        });
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isActive ? const Color(0xFF0047C7) : const Color(0xFF8DA0A5),
+            fontSize: 12.5,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeTabContent() {
+    if (_homeActiveTab == 0) {
+      // Requisitos
+      final items = [
+        'Carnet de Identidad (original y fotocopia)',
+        'Código catastral del inmueble',
+        'Última boleta de pago (si la tiene)',
+        'Poder notariado (si lo realiza un tercero)',
+      ];
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            ...items.map((item) {
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE6F8F8),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.check, color: Color(0xFF00B8B8), size: 13),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: const TextStyle(
+                              color: Color(0xFF001B4D),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: Color(0xFFEEF2F6)),
+                ],
+              );
+            }),
+            // Link item
+            InkWell(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Abriendo sitio oficial...')),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE6EFFF),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.language, color: Color(0xFF0047C7), size: 13),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Enlace oficial',
+                            style: TextStyle(
+                              color: Color(0xFF8DA0A5),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'www.lapaz.bo/tramites',
+                            style: TextStyle(
+                              color: Color(0xFF0047C7),
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (_homeActiveTab == 1) {
+      // Pasos
+      final steps = [
+        'Verifica si tienes deuda pendiente en el portal municipal.',
+        'Reúne tu documento de identidad y datos del inmueble.',
+        'Ingresa al portal oficial o acude a la oficina.',
+        'Genera la boleta o liquidación de pago.',
+        'Realiza el pago en banco o caja municipal.',
+        'Guarda el comprobante de pago.',
+      ];
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: List.generate(steps.length, (index) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF00B8B8),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          steps[index],
+                          style: const TextStyle(
+                            color: Color(0xFF001B4D),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (index < steps.length - 1)
+                  const Divider(height: 1, color: Color(0xFFEEF2F6)),
+              ],
+            );
+          }),
+        ),
+      );
+    } else {
+      // Tips
+      final tips = [
+        'Verifica si el trámite se puede hacer en línea en el portal GAMLP.',
+        'Horarios de atención: lun–vie 8:00–16:00.',
+        'Llevar fotocopias de todos tus documentos.',
+        'Confirma dónde se realiza el pago.',
+        'Si va un tercero, lleva poder notariado.',
+      ];
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: List.generate(tips.length, (index) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Color(0xFF00B8B8), size: 18),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          tips[index],
+                          style: const TextStyle(
+                            color: Color(0xFF001B4D),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (index < tips.length - 1)
+                  const Divider(height: 1, color: Color(0xFFEEF2F6)),
+              ],
+            );
+          }),
+        ),
+      );
+    }
+  }
+
+  Widget _buildHistoryView() {
+    final chats = [
+      {
+        'title': 'Pago de impuesto de inmueble',
+        'time': 'Hoy, 10:30',
+        'status': 'Completado',
+        'statusColor': const Color(0xFFE6F8F8),
+        'textColor': const Color(0xFF00B8B8),
+      },
+      {
+        'title': 'Licencia de funcionamiento',
+        'time': 'Ayer, 15:20',
+        'status': 'En proceso',
+        'statusColor': const Color(0xFFE6EFFF),
+        'textColor': const Color(0xFF0047C7),
+        'note': 'Recoger documento el 15 jul',
+      },
+      {
+        'title': 'Transferencia de inmueble',
+        'time': '23 jun, 9:00',
+        'status': 'Pendiente',
+        'statusColor': const Color(0xFFF1F5F9),
+        'textColor': const Color(0xFF8DA0A5),
+      },
+      {
+        'title': 'Registro de actividad económica',
+        'time': '20 jun, 14:05',
+        'status': 'Completado',
+        'statusColor': const Color(0xFFE6F8F8),
+        'textColor': const Color(0xFF00B8B8),
+      },
+    ];
+
+    final recordatorios = [
+      {
+        'title': 'Licencia de funcionamiento',
+        'desc': 'Recoger documento aprobado',
+        'date': '15 jul 2025',
+        'urgent': true,
+      },
+      {
+        'title': 'Pago de impuesto vehicular',
+        'desc': 'Vencimiento sin multa',
+        'date': '31 jul 2025',
+        'urgent': false,
+      },
+      {
+        'title': 'Renovación de matrícula',
+        'desc': 'Presentar documentos actualizados',
+        'date': '10 ago 2025',
+        'urgent': false,
+      },
+    ];
+
+    final query = _historySearchQuery.toLowerCase().trim();
+    final filteredChats = chats.where((chat) {
+      return (chat['title'] as String).toLowerCase().contains(query);
+    }).toList();
+
+    final filteredRecordatorios = recordatorios.where((rec) {
+      return (rec['title'] as String).toLowerCase().contains(query) || (rec['desc'] as String).toLowerCase().contains(query);
+    }).toList();
+
+    return Expanded(
+      child: Column(
+        children: [
+          // Blue panel with Title and Search
+          Container(
+            width: double.infinity,
+            color: const Color(0xFF0047C7),
+            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Historial',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search, color: Color(0xFF8DA0A5), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _historySearchController,
+                          onChanged: (val) {
+                            setState(() {
+                              _historySearchQuery = val;
+                            });
+                          },
+                          style: const TextStyle(fontSize: 14.5, color: Color(0xFF001B4D)),
+                          decoration: const InputDecoration(
+                            hintText: 'Buscar consulta...',
+                            hintStyle: TextStyle(color: Color(0xFF8DA0A5), fontSize: 13.5),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      if (_historySearchQuery.isNotEmpty)
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.close, color: Color(0xFF8DA0A5), size: 18),
+                          onPressed: () {
+                            setState(() {
+                              _historySearchController.clear();
+                              _historySearchQuery = '';
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Selector Tab (Chats / Recordatorios)
+          Container(
+            color: const Color(0xFFF3F7FE),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              padding: const EdgeInsets.all(3),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _historyActiveTab = 0;
+                        });
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: _historyActiveTab == 0 ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.chat_bubble_outline, size: 16, color: Color(0xFF0047C7)),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Chats',
+                              style: TextStyle(
+                                color: _historyActiveTab == 0 ? const Color(0xFF0047C7) : const Color(0xFF8DA0A5),
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _historyActiveTab = 1;
+                        });
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: _historyActiveTab == 1 ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.notifications_none_outlined, size: 16, color: Color(0xFF0047C7)),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Recordatorios',
+                              style: TextStyle(
+                                color: _historyActiveTab == 1 ? const Color(0xFF0047C7) : const Color(0xFF8DA0A5),
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFDC2626),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Text(
+                                '1',
+                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // List content
+          Expanded(
+            child: _historyActiveTab == 0
+                ? _buildChatsTabContent(filteredChats)
+                : _buildRecordatoriosTabContent(filteredRecordatorios),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatsTabContent(List<Map<String, dynamic>> filteredChats) {
+    if (filteredChats.isEmpty) {
+      return const Center(
+        child: Text(
+          'No se encontraron consultas',
+          style: TextStyle(color: Color(0xFF8DA0A5), fontSize: 13.5, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      itemCount: filteredChats.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final chat = filteredChats[index];
+        final note = chat['note'] as String?;
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _currentTab = 0; // Go to full procedure details on tap
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text('📋', style: TextStyle(fontSize: 20)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        chat['title']!,
+                        style: const TextStyle(
+                          color: Color(0xFF001B4D),
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            chat['time']!,
+                            style: const TextStyle(
+                              color: Color(0xFF8DA0A5),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: chat['statusColor'] as Color,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              chat['status']!,
+                              style: TextStyle(
+                                color: chat['textColor'] as Color,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (note != null) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.notifications_none_outlined, size: 12, color: Color(0xFF00B8B8)),
+                            const SizedBox(width: 4),
+                            Text(
+                              note,
+                              style: const TextStyle(
+                                color: Color(0xFF00B8B8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1), size: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecordatoriosTabContent(List<Map<String, dynamic>> filteredRecs) {
+    return Column(
+      children: [
+        Expanded(
+          child: filteredRecs.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No se encontraron recordatorios',
+                    style: TextStyle(color: Color(0xFF8DA0A5), fontSize: 13.5, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  itemCount: filteredRecs.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final rec = filteredRecs[index];
+                    final isUrgent = rec['urgent'] as bool;
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.only(top: 2),
+                                child: const Icon(Icons.notifications_active_outlined, color: Color(0xFF0047C7), size: 18),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      rec['title']!,
+                                      style: const TextStyle(
+                                        color: Color(0xFF001B4D),
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      rec['desc']!,
+                                      style: const TextStyle(
+                                        color: Color(0xFF8DA0A5),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isUrgent)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFEBEB),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    '¡Urgente!',
+                                    style: TextStyle(
+                                      color: Color(0xFFDC2626),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                rec['date']!,
+                                style: const TextStyle(
+                                  color: Color(0xFF8DA0A5),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _currentTab = 0; // Go to full procedure details
+                                  });
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: const Text(
+                                  'Ver trámite →',
+                                  style: TextStyle(
+                                    color: Color(0xFF0047C7),
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Añadiendo nuevo recordatorio...')),
+                );
+              },
+              icon: const Icon(Icons.add, color: Color(0xFF00B8B8), size: 18),
+              label: const Text(
+                'Añadir recordatorio',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF00B8B8),
+                side: const BorderSide(color: Color(0xFF00B8B8), width: 1.2),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDocsView() {
     int checkedCount = _docChecked.where((c) => c).length;
     double percent = checkedCount / 6.0;
@@ -1368,7 +2361,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                                         ],
                                       ),
                                     )
-                                  else
+                                  else if (_currentTab == 2)
                                     Container(
                                       height: 56,
                                       color: Colors.white,
@@ -1420,7 +2413,9 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                                     ),
                                   
                                   // 3. Tab Body Content
-                                  if (_currentTab == 1)
+                                  if (_currentTab == 0)
+                                    _buildHomeView()
+                                  else if (_currentTab == 1)
                                     Expanded(
                                       child: _isChatMode
                                           ? ListView.builder(
@@ -1467,19 +2462,8 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                                     )
                                   else if (_currentTab == 2)
                                     _buildDocsView()
-                                  else
-                                    Expanded(
-                                      child: Center(
-                                        child: Text(
-                                          _currentTab == 0 ? 'Pantalla de Inicio' : 'Historial de Consultas',
-                                          style: const TextStyle(
-                                            color: Color(0xFF003C9E),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 18,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                  else if (_currentTab == 3)
+                                    _buildHistoryView(),
                                 ],
                               ),
                               bottomNavigationBar: Container(
@@ -1612,6 +2596,12 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                                   onClose: () {
                                     setState(() {
                                       _showProcedureDetail = false;
+                                    });
+                                  },
+                                  onShowFullFicha: () {
+                                    setState(() {
+                                      _showProcedureDetail = false;
+                                      _currentTab = 0; // Transition to Home (Ficha Completa)
                                     });
                                   },
                                 ),

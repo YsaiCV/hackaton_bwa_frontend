@@ -4,8 +4,14 @@ import 'procedure_card.dart';
 class ProcedureDetailSheet extends StatelessWidget {
   final ProcedureData data;
   final VoidCallback onClose;
+  final VoidCallback? onShowFullFicha;
 
-  const ProcedureDetailSheet({super.key, required this.data, required this.onClose});
+  const ProcedureDetailSheet({
+    super.key,
+    required this.data,
+    required this.onClose,
+    this.onShowFullFicha,
+  });
 
   Widget _buildCheckItem(String text) {
     return Padding(
@@ -361,7 +367,9 @@ class ProcedureDetailSheet extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      debugPrint('Ver ficha completa presionado');
+                      if (onShowFullFicha != null) {
+                        onShowFullFicha!();
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0047C7),

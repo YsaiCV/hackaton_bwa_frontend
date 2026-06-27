@@ -96,7 +96,9 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                     modality: dataMap['modality'] ?? '',
                     iconEmoji: dataMap['iconEmoji'] ?? '📄',
                     steps: List<String>.from(dataMap['steps'] ?? []),
-                    documents: List<String>.from(dataMap['documents'] ?? []),
+                    documents: (dataMap['documents'] as List?)
+                        ?.map((e) => ProcedureDocument.fromJson(e))
+                        .toList() ?? [],
                     recommendations: List<String>.from(dataMap['recommendations'] ?? []),
                     whoCanDoIt: dataMap['whoCanDoIt'] ?? '',
                     whoCanDoItSubtitle: dataMap['whoCanDoItSubtitle'] ?? '',

@@ -21,9 +21,119 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  String? _currentSessionId;
+  List<Map<String, dynamic>> _sessions = [];
+  bool _isLoadingSessions = false;
+  bool _isLoadingMessages = false;
+
   @override
   void initState() {
     super.initState();
+    _loadSessions();
+  }
+
+  Future<void> _loadSessions() async {
+    setState(() => _isLoadingSessions = true);
+    try {
+      final sessions = await _apiService.getSessions();
+      if (mounted) {
+        setState(() {
+          _sessions = sessions;
+          _isLoadingSessions = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingSessions = false);
+      }
+    }
+  }
+
+  Future<void> _loadMessages(String sessionId) async {
+    setState(() => _isLoadingMessages = true);
+    try {
+      final rawMessages = await _apiService.getMessages(sessionId);
+      if (mounted) {
+        final parsed = rawMessages.map((m) => _parseBackendMessage(m)).toList();
+        setState(() {
+          _messages.clear();
+          _messages.addAll(parsed);
+          _currentSessionId = sessionId;
+          _isChatMode = true;
+          _isLoadingMessages = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMessages = false);
+      }
+    }
+  }
+
+  ChatMessage _parseBackendMessage(Map<String, dynamic> raw) {
+    final role = raw['role'] as String?;
+    final content = raw['content'] as String? ?? '';
+    final isUser = role == 'user';
+
+    final message = ChatMessage(
+      id: raw['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      text: isUser ? content : '',
+      isUser: isUser,
+      sessionId: raw['sessionId'] as String?,
+      createdAt: raw['createdAt'] != null ? DateTime.tryParse(raw['createdAt']) : null,
+    );
+
+    if (!isUser && content.isNotEmpty) {
+      String cleanStr = content.trim();
+      if (cleanStr.startsWith('```json')) {
+        cleanStr = cleanStr.substring(7);
+      } else if (cleanStr.startsWith('```')) {
+        cleanStr = cleanStr.substring(3);
+      }
+      if (cleanStr.endsWith('```')) {
+        cleanStr = cleanStr.substring(0, cleanStr.length - 3);
+      }
+      cleanStr = cleanStr.trim();
+
+      if (cleanStr.startsWith('{')) {
+        try {
+          final dataMap = jsonDecode(cleanStr);
+          if (dataMap['type'] == 'procedure_list') {
+            message.procedureList = dataMap;
+          } else {
+            message.procedureData = ProcedureData(
+              title: dataMap['title'] ?? 'Trámite',
+              institution: dataMap['institution'] ?? '',
+              cost: dataMap['cost'] ?? '',
+              time: dataMap['time'] ?? '',
+              modality: dataMap['modality'] ?? '',
+              iconEmoji: dataMap['iconEmoji'] ?? '📄',
+              steps: List<String>.from(dataMap['steps'] ?? []),
+              documents: (dataMap['documents'] as List?)
+                  ?.map((e) => ProcedureDocument.fromJson(e))
+                  .toList() ?? [],
+              recommendations: List<String>.from(dataMap['recommendations'] ?? []),
+              whoCanDoIt: dataMap['whoCanDoIt'] ?? '',
+              whoCanDoItSubtitle: dataMap['whoCanDoItSubtitle'] ?? '',
+              whereToDoIt: List<String>.from(dataMap['whereToDoIt'] ?? []),
+              sources: (dataMap['sources'] as List?)?.map<Map<String, String>>((s) => {
+                'title': s['title']?.toString() ?? '',
+                'url': s['url']?.toString() ?? ''
+              }).toList() ?? <Map<String, String>>[],
+              hasDownloadableDocs: dataMap['hasDownloadableDocs'] ?? false,
+              hasDynamicFill: dataMap['hasDynamicFill'] ?? false,
+            );
+          }
+        } catch (e) {
+          message.text = content;
+        }
+      } else {
+        message.text = content;
+      }
+    }
+
+    return message;
   }
   
   void _startStreaming() {
@@ -56,7 +166,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
 
     final botMessage = _messages.last;
 
-    _apiService.streamCitizenshipQuery(query).listen(
+    _apiService.streamCitizenshipQuery(query, sessionId: _currentSessionId).listen(
       (chunkMap) {
         if (mounted) {
           setState(() {
@@ -69,6 +179,14 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
               newSteps.add(msg.toString());
               botMessage.steps = newSteps;
             } else if (eventName == 'final') {
+              if (chunkMap['sessionId'] != null) {
+                final newSessionId = chunkMap['sessionId'] as String;
+                if (_currentSessionId != newSessionId) {
+                  _currentSessionId = newSessionId;
+                  // Recargar la lista de sesiones para que aparezca la nueva entrada
+                  _loadSessions();
+                }
+              }
               botMessage.finalResult = chunkMap;
               final summaryStr = chunkMap['summary']?.toString() ?? '';
               
@@ -448,6 +566,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                     _messages.clear();
                     _isChatMode = false;
                     _queryController.clear();
+                    _currentSessionId = null;
                   });
                   if (MediaQuery.of(context).size.width < 800) {
                     Navigator.pop(context);
@@ -471,22 +590,51 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text(
-                'Recientes',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Recientes',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+                  ),
+                  if (_sessions.isNotEmpty)
+                    GestureDetector(
+                      onTap: _loadSessions,
+                      child: const Icon(Icons.refresh, size: 18, color: Colors.grey),
+                    ),
+                ],
               ),
             ),
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  _buildDrawerItem('¿Cómo obtener la visa?'),
-                  _buildDrawerItem('Requisitos para pasaporte'),
-                  _buildDrawerItem('Pago de impuestos 2024'),
-                ],
-              ),
+              child: _isLoadingSessions
+                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                  : _sessions.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No hay conversaciones aún',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        )
+                      : ListView(
+                          padding: EdgeInsets.zero,
+                          children: _sessions.map((s) {
+                            final sid = s['sessionId'] as String? ?? '';
+                            final firstMsg = s['firstMessage'] as String? ?? 'Conversación';
+                            final lastActivity = s['lastActivity'] != null
+                                ? DateTime.tryParse(s['lastActivity'] as String)
+                                : null;
+                            final dateStr = lastActivity != null
+                                ? '${lastActivity.day}/${lastActivity.month}/${lastActivity.year}'
+                                : '';
+                            return _buildDrawerItem(
+                              firstMsg,
+                              sessionId: sid,
+                              trailing: dateStr.isNotEmpty ? dateStr : null,
+                            );
+                          }).toList(),
+                        ),
             ),
             const Divider(),
             _buildDrawerItem('Configuración', icon: Icons.settings),
@@ -498,7 +646,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
     );
   }
 
-  Widget _buildDrawerItem(String title, {IconData? icon}) {
+  Widget _buildDrawerItem(String title, {IconData? icon, String? sessionId, String? trailing}) {
     return ListTile(
       leading: Icon(icon ?? Icons.chat_bubble_outline, size: 20, color: const Color(0xFF003C9E)),
       title: Text(
@@ -507,8 +655,18 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
+      trailing: trailing != null
+          ? Text(trailing, style: const TextStyle(fontSize: 11, color: Colors.grey))
+          : null,
+      selected: sessionId != null && _currentSessionId == sessionId,
+      selectedTileColor: const Color(0xFF0047C7).withOpacity(0.08),
       onTap: () {
-        if (MediaQuery.of(context).size.width < 800) {
+        if (sessionId != null) {
+          if (MediaQuery.of(context).size.width < 800) {
+            Navigator.pop(context);
+          }
+          _loadMessages(sessionId);
+        } else if (MediaQuery.of(context).size.width < 800) {
           Navigator.pop(context);
         }
       },
@@ -575,14 +733,25 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
             else ...[
               // Modo Chat (Lista de mensajes)
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.only(top: 20, bottom: 20),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    return _buildChatBubble(_messages[index]);
-                  },
-                ),
+                child: _isLoadingMessages
+                    ? const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00B8B8)),
+                            SizedBox(height: 12),
+                            Text('Cargando conversación...', style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.only(top: 20, bottom: 20),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          return _buildChatBubble(_messages[index]);
+                        },
+                      ),
               ),
               
               // Buscador en la parte inferior anclado

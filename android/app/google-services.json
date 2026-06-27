@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1071097750052",
+    "project_id": "yase-app",
+    "storage_bucket": "yase-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1071097750052:android:1461f6d8ab5d76a42beeb1",
+        "android_client_info": {
+          "package_name": "com.example.hackaton_bwa_frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpEw_LotJ8SZYI8P_UuxLV83w3uveQNSU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

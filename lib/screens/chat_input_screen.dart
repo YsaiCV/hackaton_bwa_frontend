@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/custom_header.dart';
@@ -69,6 +70,50 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
               botMessage.steps = newSteps;
             } else if (eventName == 'final') {
               botMessage.finalResult = chunkMap;
+              final summaryStr = chunkMap['summary']?.toString() ?? '';
+              
+              // Limpiar posibles bloques de markdown que el LLM suele agregar (ej: ```json ... ```)
+              String cleanStr = summaryStr.trim();
+              if (cleanStr.startsWith('```json')) {
+                cleanStr = cleanStr.substring(7);
+              } else if (cleanStr.startsWith('```')) {
+                cleanStr = cleanStr.substring(3);
+              }
+              if (cleanStr.endsWith('```')) {
+                cleanStr = cleanStr.substring(0, cleanStr.length - 3);
+              }
+              cleanStr = cleanStr.trim();
+
+              if (cleanStr.startsWith('{')) {
+                try {
+                  // The summary string is now a JSON returned by the new Prompt
+                  final dataMap = jsonDecode(cleanStr);
+                  botMessage.procedureData = ProcedureData(
+                    title: dataMap['title'] ?? 'Trámite',
+                    institution: dataMap['institution'] ?? '',
+                    cost: dataMap['cost'] ?? '',
+                    time: dataMap['time'] ?? '',
+                    modality: dataMap['modality'] ?? '',
+                    iconEmoji: dataMap['iconEmoji'] ?? '📄',
+                    steps: List<String>.from(dataMap['steps'] ?? []),
+                    documents: List<String>.from(dataMap['documents'] ?? []),
+                    recommendations: List<String>.from(dataMap['recommendations'] ?? []),
+                    whoCanDoIt: dataMap['whoCanDoIt'] ?? '',
+                    whoCanDoItSubtitle: dataMap['whoCanDoItSubtitle'] ?? '',
+                    whereToDoIt: List<String>.from(dataMap['whereToDoIt'] ?? []),
+                    sources: (dataMap['sources'] as List?)?.map<Map<String, String>>((s) => {
+                      'title': s['title']?.toString() ?? '',
+                      'url': s['url']?.toString() ?? ''
+                    }).toList() ?? <Map<String, String>>[],
+                    hasDownloadableDocs: dataMap['hasDownloadableDocs'] ?? false,
+                    hasDynamicFill: dataMap['hasDynamicFill'] ?? false,
+                  );
+                } catch (e) {
+                  // Fallback: If parsing fails, it will render raw summary text and show error
+                  print('Error parsing JSON from summary: $e');
+                  botMessage.error = 'Error dibujando el componente visual: $e';
+                }
+              }
             } else if (eventName == 'error') {
               botMessage.error = chunkMap['message']?.toString() ?? 'Error en el proceso';
               _isLoading = false;

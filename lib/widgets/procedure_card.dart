@@ -13,6 +13,7 @@ class ProcedureData {
   final String whoCanDoIt;
   final String whoCanDoItSubtitle;
   final List<String> whereToDoIt;
+  final List<Map<String, String>> sources;
   final bool hasDownloadableDocs;
   final bool hasDynamicFill;
 
@@ -29,6 +30,7 @@ class ProcedureData {
     required this.whoCanDoIt,
     required this.whoCanDoItSubtitle,
     required this.whereToDoIt,
+    this.sources = const [],
     this.hasDownloadableDocs = false,
     this.hasDynamicFill = false,
   });
@@ -171,6 +173,16 @@ class ProcedureCard extends StatelessWidget {
             children: [_buildListItem(data.whoCanDoIt)],
           ),
           
+          if (data.sources.isNotEmpty) ...[
+            const Divider(height: 1, color: Color(0xFFEEEEEE)),
+            _buildExpansionTile(
+              title: 'Fuentes y Enlaces Oficiales',
+              subtitle: 'Para más información',
+              icon: Icons.link_rounded,
+              children: data.sources.map((s) => _buildSourceItem(s)).toList(),
+            ),
+          ],
+          
           if (data.hasDownloadableDocs || data.hasDynamicFill)
             Container(
               padding: const EdgeInsets.all(20),
@@ -286,6 +298,40 @@ class ProcedureCard extends StatelessWidget {
             child: Text(
               text,
               style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSourceItem(Map<String, String> source) {
+    final title = source['title'] ?? 'Enlace';
+    final url = source['url'] ?? '';
+    
+    return Padding(
+      padding: const EdgeInsets.only(left: 76, right: 20, bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.open_in_new_rounded, color: Color(0xFF00B8B8), size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                if (url.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    url,
+                    style: const TextStyle(color: Color(0xFF0047C7), fontSize: 12, decoration: TextDecoration.underline),
+                  ),
+                ]
+              ],
             ),
           ),
         ],

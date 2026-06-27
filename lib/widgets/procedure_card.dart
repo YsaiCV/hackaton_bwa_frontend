@@ -7,6 +7,7 @@ class ProcedureData {
   final String time;
   final String modality;
   final String iconEmoji;
+  final String description;
   final List<String> steps;
   final List<String> documents;
   final List<String> recommendations;
@@ -24,6 +25,7 @@ class ProcedureData {
     required this.time,
     required this.modality,
     required this.iconEmoji,
+    this.description = '',
     required this.steps,
     required this.documents,
     required this.recommendations,
@@ -38,19 +40,23 @@ class ProcedureData {
 
 class ProcedureCard extends StatelessWidget {
   final ProcedureData data;
+  final VoidCallback onTap;
 
-  const ProcedureCard({super.key, required this.data});
+  const ProcedureCard({super.key, required this.data, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -74,13 +80,18 @@ class ProcedureCard extends StatelessWidget {
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        data.iconEmoji,
-                        style: const TextStyle(fontSize: 28),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          'assets/images/app-icono-yase.png',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -95,6 +106,30 @@ class ProcedureCard extends StatelessWidget {
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: onTap,
+                            behavior: HitTestBehavior.opaque,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '¿Qué es este trámite?',
+                                  style: TextStyle(
+                                    color: const Color(0xFF00B8B8).withValues(alpha: 0.9),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.chevron_right,
+                                  color: const Color(0xFF00B8B8).withValues(alpha: 0.9),
+                                  size: 16,
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -133,103 +168,80 @@ class ProcedureCard extends StatelessWidget {
             ),
           ),
           
-          // Secciones desplegables
+          // Secciones desplegables (Tarjeta Resumen - Max 3 pasos visibles)
           _buildExpansionTile(
             title: 'Pasos principales',
             subtitle: '${data.steps.length} pasos',
             icon: Icons.description_outlined,
-            children: data.steps.map((s) => _buildListItem(s)).toList(),
+            children: data.steps.length > 3
+                ? data.steps.take(3).map((s) => _buildListItem(s)).toList()
+                : data.steps.map((s) => _buildListItem(s)).toList(),
           ),
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          
-          _buildExpansionTile(
-            title: 'Documentos necesarios',
-            subtitle: '${data.documents.length} documentos',
-            icon: Icons.check_box_outlined,
-            children: data.documents.map((d) => _buildListItem(d)).toList(),
-          ),
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          
-          _buildExpansionTile(
-            title: 'Recomendaciones',
-            subtitle: 'Antes de ir',
-            icon: Icons.info_outline,
-            children: data.recommendations.map((r) => _buildListItem(r)).toList(),
-          ),
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          
-          _buildExpansionTile(
-            title: '¿Dónde puedes hacerlo?',
-            subtitle: 'Ubicaciones y canales',
-            icon: Icons.place_outlined,
-            children: data.whereToDoIt.map((w) => _buildListItem(w)).toList(),
-          ),
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
-
-          _buildExpansionTile(
-            title: '¿Quién puede realizar este trámite?',
-            subtitle: data.whoCanDoItSubtitle,
-            icon: Icons.person_outline,
-            children: [_buildListItem(data.whoCanDoIt)],
-          ),
-          
-          if (data.sources.isNotEmpty) ...[
-            const Divider(height: 1, color: Color(0xFFEEEEEE)),
-            _buildExpansionTile(
-              title: 'Fuentes y Enlaces Oficiales',
-              subtitle: 'Para más información',
-              icon: Icons.link_rounded,
-              children: data.sources.map((s) => _buildSourceItem(s)).toList(),
-            ),
-          ],
-          
-          if (data.hasDownloadableDocs || data.hasDynamicFill)
-            Container(
-              padding: const EdgeInsets.all(20),
-              color: const Color(0xFFF9FBFF),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          // Botones PDF y WhatsApp (absorbiendo tap para evitar abrir modal)
+          GestureDetector(
+            onTap: () {}, // Evita propagación al parent card
+            child: Padding(
+              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 4),
+              child: Row(
                 children: [
-                  if (data.hasDownloadableDocs)
-                    OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.download_rounded),
-                      label: const Text('Descargar documentos'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF003C9E),
-                        side: const BorderSide(color: Color(0xFF003C9E)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Descargando guía PDF...')),
+                        );
+                      },
+                      icon: const Icon(Icons.download_rounded, color: Colors.white, size: 18),
+                      label: const Text(
+                        'Descargar PDF',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                       ),
-                    ),
-                  if (data.hasDownloadableDocs && data.hasDynamicFill)
-                    const SizedBox(height: 12),
-                  if (data.hasDynamicFill)
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.edit_document),
-                      label: const Text('Llenado dinámico de documentos'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00B8B8),
+                        backgroundColor: const Color(0xFF0047D7),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Compartiendo por WhatsApp...')),
+                        );
+                      },
+                      icon: const Icon(Icons.share, color: Colors.white, size: 18),
+                      label: const Text(
+                        'WhatsApp',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
+          ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -298,40 +310,6 @@ class ProcedureCard extends StatelessWidget {
             child: Text(
               text,
               style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.4),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSourceItem(Map<String, String> source) {
-    final title = source['title'] ?? 'Enlace';
-    final url = source['url'] ?? '';
-    
-    return Padding(
-      padding: const EdgeInsets.only(left: 76, right: 20, bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.open_in_new_rounded, color: Color(0xFF00B8B8), size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                if (url.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    url,
-                    style: const TextStyle(color: Color(0xFF0047C7), fontSize: 12, decoration: TextDecoration.underline),
-                  ),
-                ]
-              ],
             ),
           ),
         ],

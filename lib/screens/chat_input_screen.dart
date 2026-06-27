@@ -27,6 +27,16 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   bool _isChatMode = false;
   bool _showProcedureDetail = false;
   ProcedureData? _selectedProcedureData;
+  int _currentTab = 1;
+  final List<bool> _docChecked = [true, true, false, false, false, false];
+  final List<String> _docTitles = [
+    'Carnet de Identidad (original)',
+    'Fotocopia del Carnet de Identidad',
+    'Código catastral o datos del inmueble',
+    'Última boleta de pago (si la tienes)',
+    'Poder notariado (si tramita un tercero)',
+    'Comprobante de deuda o liquidación',
+  ];
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -855,32 +865,317 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
     }
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isActive) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: isActive ? const Color(0xFFE6EFFF) : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: isActive ? const Color(0xFFE6EFFF) : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              icon,
+              color: isActive ? const Color(0xFF0047C7) : const Color(0xFF8DA0A5),
+              size: 20,
+            ),
           ),
-          child: Icon(
-            icon,
-            color: isActive ? const Color(0xFF0047C7) : const Color(0xFF8DA0A5),
-            size: 20,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? const Color(0xFF0047C7) : const Color(0xFF8DA0A5),
+              fontSize: 10,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? const Color(0xFF0047C7) : const Color(0xFF8DA0A5),
-            fontSize: 10,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocsView() {
+    int checkedCount = _docChecked.where((c) => c).length;
+    double percent = checkedCount / 6.0;
+    String percentText = '${(percent * 100).toInt()}%';
+
+    return Expanded(
+      child: Column(
+        children: [
+          // Blue panel
+          Container(
+            width: double.infinity,
+            color: const Color(0xFF0047C7),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Documentos necesarios para este trámite',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Progreso',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            percentText,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        height: 6,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                width: constraints.maxWidth * percent,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00B8B8),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '$checkedCount de 6 documentos listos',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          // Scrollable Checklist content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                children: [
+                  // White Checklist Card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _docTitles.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFEEF2F6)),
+                      itemBuilder: (context, index) {
+                        final isChecked = _docChecked[index];
+                        final title = _docTitles[index];
+                        final hasBadge = index == 1 || index == 2;
+                        
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              _docChecked[index] = !_docChecked[index];
+                            });
+                          },
+                          borderRadius: index == 0
+                              ? const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20))
+                              : index == _docTitles.length - 1
+                                  ? const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20))
+                                  : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: isChecked ? const Color(0xFF00B8B8) : Colors.transparent,
+                                    border: isChecked
+                                        ? null
+                                        : Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: isChecked
+                                      ? const Icon(Icons.check, color: Colors.white, size: 14)
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          title,
+                                          style: TextStyle(
+                                            color: isChecked ? const Color(0xFF8DA0A5) : const Color(0xFF001B4D),
+                                            fontSize: 13.5,
+                                            fontWeight: isChecked ? FontWeight.normal : FontWeight.w600,
+                                            decoration: isChecked ? TextDecoration.lineThrough : TextDecoration.none,
+                                          ),
+                                        ),
+                                      ),
+                                      if (hasBadge && !isChecked)
+                                        Container(
+                                          margin: const EdgeInsets.only(left: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFFEBEB),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'Requerido',
+                                            style: TextStyle(
+                                              color: Color(0xFFDC2626),
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Advice card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6F8F8),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF00B8B8).withValues(alpha: 0.15), width: 1),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline, color: Color(0xFF00B8B8), size: 18),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Consejo: Lleva fotocopias adicionales de todos los documentos.',
+                            style: TextStyle(
+                              color: Color(0xFF001B4D),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Bottom buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Descargando checklist PDF...')),
+                            );
+                          },
+                          icon: const Icon(Icons.download_rounded, color: Colors.white, size: 18),
+                          label: const Text(
+                            'Descargar PDF',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0047C7),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Compartiendo checklist por WhatsApp...')),
+                            );
+                          },
+                          icon: const Icon(Icons.share, color: Color(0xFF00B8B8), size: 18),
+                          label: const Text(
+                            'WhatsApp',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            side: const BorderSide(color: Color(0xFF00B8B8), width: 1.2),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -975,154 +1270,216 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                                     ),
                                   ),
                                   
-                                  // 2. Action Bar / Header
-                                  Container(
-                                    height: 56,
-                                    color: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        // Back button
-                                        Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFF7F9FD),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: IconButton(
-                                            padding: EdgeInsets.zero,
-                                            icon: const Icon(Icons.arrow_back, color: Color(0xFF0047C7), size: 18),
-                                            onPressed: () {
-                                              Navigator.pop(context);
-                                            },
-                                          ),
-                                        ),
-                                        
-                                        // Center logo + info
-                                        Row(
-                                          children: [
-                                            Container(
-                                              width: 36,
-                                              height: 36,
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xFF00B8B8),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              alignment: Alignment.center,
-                                              child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(18),
-                                                child: Image.asset(
-                                                  'assets/images/app-icono-yase.png',
-                                                  width: 36,
-                                                  height: 36,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
+                                  // 2. Action Bar / Header (conditional on tab)
+                                  if (_currentTab == 1)
+                                    Container(
+                                      height: 56,
+                                      color: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFF7F9FD),
+                                              shape: BoxShape.circle,
                                             ),
-                                            const SizedBox(width: 10),
-                                            Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                const Text(
-                                                  'Ya Sé',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF003C9E),
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 15,
+                                            child: IconButton(
+                                              padding: EdgeInsets.zero,
+                                              icon: const Icon(Icons.arrow_back, color: Color(0xFF0047C7), size: 18),
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                width: 36,
+                                                height: 36,
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xFF00B8B8),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(18),
+                                                  child: Image.asset(
+                                                    'assets/images/app-icono-yase.png',
+                                                    width: 36,
+                                                    height: 36,
+                                                    fit: BoxFit.cover,
                                                   ),
                                                 ),
-                                                Row(
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'Ya Sé',
+                                                    style: TextStyle(
+                                                      color: Color(0xFF003C9E),
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: 6,
+                                                        height: 6,
+                                                        decoration: const BoxDecoration(
+                                                          color: Color(0xFF34A853),
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      const Text(
+                                                        'Asistente inteligente',
+                                                        style: TextStyle(
+                                                          color: Color(0xFF8DA0A5),
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFF7F9FD),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: IconButton(
+                                              padding: EdgeInsets.zero,
+                                              icon: const Icon(Icons.more_vert, color: Color(0xFF0047C7), size: 18),
+                                              onPressed: () {},
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    Container(
+                                      height: 56,
+                                      color: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFF7F9FD),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: IconButton(
+                                              padding: EdgeInsets.zero,
+                                              icon: const Icon(Icons.arrow_back, color: Color(0xFF0047C7), size: 18),
+                                              onPressed: () {
+                                                setState(() {
+                                                  _currentTab = 1;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                          Image.asset(
+                                            'assets/images/logo-yase.png',
+                                            height: 28,
+                                            fit: BoxFit.contain,
+                                          ),
+                                          Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFF7F9FD),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: IconButton(
+                                              padding: EdgeInsets.zero,
+                                              icon: const Icon(Icons.share, color: Color(0xFF0047C7), size: 18),
+                                              onPressed: () {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Compartiendo documentos...')),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  
+                                  // 3. Tab Body Content
+                                  if (_currentTab == 1)
+                                    Expanded(
+                                      child: _isChatMode
+                                          ? ListView.builder(
+                                              controller: _scrollController,
+                                              padding: const EdgeInsets.only(top: 10, bottom: 20),
+                                              itemCount: _messages.length,
+                                              itemBuilder: (context, index) {
+                                                return _buildChatBubble(_messages[index]);
+                                              },
+                                            )
+                                          : Center(
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                                                child: Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
                                                   children: [
-                                                    Container(
-                                                      width: 6,
-                                                      height: 6,
-                                                      decoration: const BoxDecoration(
-                                                        color: Color(0xFF34A853),
-                                                        shape: BoxShape.circle,
+                                                    Image.asset(
+                                                      'assets/images/logo-yase.png',
+                                                      height: 70,
+                                                      fit: BoxFit.contain,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    const Text(
+                                                      '¿En qué te puedo ayudar hoy?',
+                                                      style: TextStyle(
+                                                        color: Color(0xFF003C9E),
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 18,
                                                       ),
                                                     ),
-                                                    const SizedBox(width: 4),
+                                                    const SizedBox(height: 8),
                                                     const Text(
-                                                      'Asistente inteligente',
+                                                      'Pregúntame sobre trámites, requisitos o pasos en Bolivia.',
+                                                      textAlign: TextAlign.center,
                                                       style: TextStyle(
                                                         color: Color(0xFF8DA0A5),
-                                                        fontSize: 10,
-                                                        fontWeight: FontWeight.w600,
+                                                        fontSize: 13.5,
                                                       ),
                                                     ),
                                                   ],
                                                 ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        
-                                        // Menu button
-                                        Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFF7F9FD),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: IconButton(
-                                            padding: EdgeInsets.zero,
-                                            icon: const Icon(Icons.more_vert, color: Color(0xFF0047C7), size: 18),
-                                            onPressed: () {},
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  
-                                  // 3. Chat Messages / Content
-                                  Expanded(
-                                    child: _isChatMode
-                                        ? ListView.builder(
-                                            controller: _scrollController,
-                                            padding: const EdgeInsets.only(top: 10, bottom: 20),
-                                            itemCount: _messages.length,
-                                            itemBuilder: (context, index) {
-                                              return _buildChatBubble(_messages[index]);
-                                            },
-                                          )
-                                        : Center(
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Image.asset(
-                                                    'assets/images/logo-yase.png',
-                                                    height: 70,
-                                                    fit: BoxFit.contain,
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  const Text(
-                                                    '¿En qué te puedo ayudar hoy?',
-                                                    style: TextStyle(
-                                                      color: Color(0xFF003C9E),
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 18,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  const Text(
-                                                    'Pregúntame sobre trámites, requisitos o pasos en Bolivia.',
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      color: Color(0xFF8DA0A5),
-                                                      fontSize: 13.5,
-                                                    ),
-                                                  ),
-                                                ],
                                               ),
                                             ),
+                                    )
+                                  else if (_currentTab == 2)
+                                    _buildDocsView()
+                                  else
+                                    Expanded(
+                                      child: Center(
+                                        child: Text(
+                                          _currentTab == 0 ? 'Pantalla de Inicio' : 'Historial de Consultas',
+                                          style: const TextStyle(
+                                            color: Color(0xFF003C9E),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
                                           ),
-                                  ),
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                               bottomNavigationBar: Container(
@@ -1130,74 +1487,75 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (_isChatMode) _buildChipsRow(),
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 4),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Container(
-                                              height: 48,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius: BorderRadius.circular(24),
-                                                border: Border.all(
-                                                  color: const Color(0xFFDFE8F5),
-                                                  width: 1.5,
+                                    if (_currentTab == 1 && _isChatMode) _buildChipsRow(),
+                                    if (_currentTab == 1)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 4),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Container(
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(24),
+                                                  border: Border.all(
+                                                    color: const Color(0xFFDFE8F5),
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Padding(
+                                                      padding: EdgeInsets.symmetric(horizontal: 12),
+                                                      child: Icon(Icons.search, color: Color(0xFF00B8B8), size: 20),
+                                                    ),
+                                                    Expanded(
+                                                      child: TextField(
+                                                        controller: _queryController,
+                                                        style: const TextStyle(fontSize: 14.5, color: Color(0xFF001B4D)),
+                                                        decoration: const InputDecoration(
+                                                          hintText: '¿Qué necesitas hacer?',
+                                                          hintStyle: TextStyle(color: Color(0xFF8DA0A5), fontSize: 13.5),
+                                                          border: InputBorder.none,
+                                                          contentPadding: EdgeInsets.symmetric(vertical: 12),
+                                                        ),
+                                                        onSubmitted: (_) => _startStreaming(),
+                                                      ),
+                                                    ),
+                                                    IconButton(
+                                                      icon: const Icon(Icons.attach_file, color: Color(0xFF8DA0A5), size: 20),
+                                                      onPressed: () {},
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                              child: Row(
-                                                children: [
-                                                  const Padding(
-                                                    padding: EdgeInsets.symmetric(horizontal: 12),
-                                                    child: Icon(Icons.search, color: Color(0xFF00B8B8), size: 20),
-                                                  ),
-                                                  Expanded(
-                                                    child: TextField(
-                                                      controller: _queryController,
-                                                      style: const TextStyle(fontSize: 14.5, color: Color(0xFF001B4D)),
-                                                      decoration: const InputDecoration(
-                                                        hintText: '¿Qué necesitas hacer?',
-                                                        hintStyle: TextStyle(color: Color(0xFF8DA0A5), fontSize: 13.5),
-                                                        border: InputBorder.none,
-                                                        contentPadding: EdgeInsets.symmetric(vertical: 12),
-                                                      ),
-                                                      onSubmitted: (_) => _startStreaming(),
-                                                    ),
-                                                  ),
-                                                  IconButton(
-                                                    icon: const Icon(Icons.attach_file, color: Color(0xFF8DA0A5), size: 20),
-                                                    onPressed: () {},
-                                                  ),
-                                                ],
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              width: 48,
+                                              height: 48,
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFF0047C7),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: IconButton(
+                                                icon: _isLoading
+                                                    ? const SizedBox(
+                                                        width: 16,
+                                                        height: 16,
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.white,
+                                                        ),
+                                                      )
+                                                    : const Icon(Icons.send, color: Colors.white, size: 18),
+                                                onPressed: _isLoading ? null : _startStreaming,
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            width: 48,
-                                            height: 48,
-                                            decoration: const BoxDecoration(
-                                              color: Color(0xFF0047C7),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: IconButton(
-                                              icon: _isLoading
-                                                  ? const SizedBox(
-                                                      width: 16,
-                                                      height: 16,
-                                                      child: CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        color: Colors.white,
-                                                      ),
-                                                    )
-                                                  : const Icon(Icons.send, color: Colors.white, size: 18),
-                                              onPressed: _isLoading ? null : _startStreaming,
-                                            ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
                                     Container(
                                       height: 80,
                                       decoration: const BoxDecoration(
@@ -1209,10 +1567,26 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                                         children: [
-                                          _buildNavItem(Icons.home_outlined, 'Inicio', false),
-                                          _buildNavItem(Icons.chat_bubble_outline, 'IA', true),
-                                          _buildNavItem(Icons.assignment_outlined, 'Docs', false),
-                                          _buildNavItem(Icons.history_outlined, 'Historial', false),
+                                          _buildNavItem(Icons.home_outlined, 'Inicio', _currentTab == 0, () {
+                                            setState(() {
+                                              _currentTab = 0;
+                                            });
+                                          }),
+                                          _buildNavItem(Icons.chat_bubble_outline, 'IA', _currentTab == 1, () {
+                                            setState(() {
+                                              _currentTab = 1;
+                                            });
+                                          }),
+                                          _buildNavItem(Icons.assignment_outlined, 'Docs', _currentTab == 2, () {
+                                            setState(() {
+                                              _currentTab = 2;
+                                            });
+                                          }),
+                                          _buildNavItem(Icons.history_outlined, 'Historial', _currentTab == 3, () {
+                                            setState(() {
+                                              _currentTab = 3;
+                                            });
+                                          }),
                                         ],
                                       ),
                                     ),

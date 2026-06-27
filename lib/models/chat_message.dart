@@ -1,3 +1,5 @@
+import '../widgets/procedure_card.dart';
+
 class ChatMessage {
   final String id;
   String text;
@@ -5,6 +7,7 @@ class ChatMessage {
   
   List<String> steps;
   Map<String, dynamic>? finalResult;
+  ProcedureData? procedureData;
   String? error;
 
   ChatMessage({
@@ -13,6 +16,7 @@ class ChatMessage {
     required this.isUser,
     this.steps = const [],
     this.finalResult,
+    this.procedureData,
     this.error,
   });
 }

@@ -49,23 +49,30 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
 
     final botMessage = _messages.last;
 
-    _apiService.streamResearch(query).listen(
+    _apiService.streamCitizenshipQuery(query).listen(
       (chunkMap) {
         if (mounted) {
           setState(() {
-            if (chunkMap.containsKey('step')) {
-              // It's a step indicator
+            final eventName = chunkMap['__eventName'];
+            
+            if (eventName == 'agent_event') {
               final newSteps = List<String>.from(botMessage.steps);
-              if (chunkMap['message'] != null) {
-                newSteps.add(chunkMap['message'].toString());
-              }
+              // Handle potential keys for the agent message/action
+              final msg = chunkMap['message'] ?? chunkMap['action'] ?? chunkMap['name'] ?? chunkMap['step'] ?? 'Procesando...';
+              newSteps.add(msg.toString());
               botMessage.steps = newSteps;
-            } else if (chunkMap.containsKey('summary')) {
-              // It's the final result payload
+            } else if (eventName == 'final') {
               botMessage.finalResult = chunkMap;
-            } else if (chunkMap.containsKey('rawText')) {
-              // Fallback if not matching the structured JSON
-              botMessage.text += chunkMap['rawText'].toString();
+            } else if (eventName == 'error') {
+              botMessage.error = chunkMap['message']?.toString() ?? 'Error en el proceso';
+              _isLoading = false;
+            } else if (eventName == 'done') {
+              _isLoading = false;
+            } else {
+               // Fallback just in case
+               if (chunkMap.containsKey('rawText')) {
+                 botMessage.text += chunkMap['rawText'].toString();
+               }
             }
           });
           _scrollToBottom();
@@ -161,7 +168,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (result['summary'] != null) ...[
+          if (result['summary'] != null && result['summary'].toString().trim().isNotEmpty) ...[
             Text(
               result['summary'].toString(),
               style: const TextStyle(fontSize: 16, color: Colors.black87),

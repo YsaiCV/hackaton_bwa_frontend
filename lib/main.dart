@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
       title: 'YaSÉ',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00458F)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF003C9E)),
         fontFamily: 'Roboto', 
       ),
       home: const ChatInputScreen(),

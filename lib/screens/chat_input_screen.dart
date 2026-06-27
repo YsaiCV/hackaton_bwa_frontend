@@ -17,6 +17,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   bool _isChatMode = false;
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   
   void _startStreaming() {
     if (_queryController.text.trim().isEmpty) return;
@@ -119,14 +120,14 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
         decoration: InputDecoration(
           hintText: '¿Qué necesitas hacer?',
           hintStyle: TextStyle(color: Colors.grey.shade500),
-          prefixIcon: const Icon(Icons.search, color: Color(0xFF00ACC1)),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFF00B8B8)),
           suffixIcon: Padding(
             padding: const EdgeInsets.all(6.0),
             child: InkWell(
               onTap: _isLoading ? null : _startStreaming,
               child: Container(
                 decoration: const BoxDecoration(
-                  color: Color(0xFF002366),
+                  color: Color(0xFF0047C7),
                   shape: BoxShape.circle,
                 ),
                 child: _isLoading 
@@ -210,7 +211,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
           const SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00ACC1)),
+            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00B8B8)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -233,7 +234,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
         SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00ACC1)),
+          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00B8B8)),
         ),
         SizedBox(width: 12),
         Text('Iniciando...', style: TextStyle(color: Colors.black54, fontStyle: FontStyle.italic, fontSize: 14)),
@@ -242,123 +243,243 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   }
 
   Widget _buildChatBubble(ChatMessage message) {
-    return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: message.isUser ? const Color(0xFF002366) : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: Radius.circular(message.isUser ? 20 : 0),
-            bottomRight: Radius.circular(message.isUser ? 0 : 20),
-          ),
-          boxShadow: [
-            if (!message.isUser)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: Row(
+        mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!message.isUser) ...[
+            Container(
+              margin: const EdgeInsets.only(right: 8, bottom: 4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  'assets/images/app-icono-yase.png',
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.cover,
+                ),
               ),
+            ),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: message.isUser ? const Color(0xFF0047C7) : const Color(0xFFF5F8FC),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(message.isUser ? 20 : 0),
+                  bottomRight: Radius.circular(message.isUser ? 0 : 20),
+                ),
+                boxShadow: [
+                  if (!message.isUser)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                ],
+              ),
+              child: message.isUser 
+                  ? Text(
+                      message.text,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    )
+                  : _buildBotMessageContent(message),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isSidebarOpenDesktop = true;
+
+  Widget _buildSidebarContent() {
+    return Container(
+      width: 280,
+      color: const Color(0xFFF5F8FC),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _messages.clear();
+                    _isChatMode = false;
+                    _queryController.clear();
+                  });
+                  if (MediaQuery.of(context).size.width < 800) {
+                    Navigator.pop(context);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, color: Color(0xFF003C9E), size: 20),
+                      SizedBox(width: 8),
+                      Text('Nuevo chat', style: TextStyle(color: Color(0xFF003C9E), fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text(
+                'Recientes',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _buildDrawerItem('¿Cómo obtener la visa?'),
+                  _buildDrawerItem('Requisitos para pasaporte'),
+                  _buildDrawerItem('Pago de impuestos 2024'),
+                ],
+              ),
+            ),
+            const Divider(),
+            _buildDrawerItem('Configuración', icon: Icons.settings),
+            _buildDrawerItem('Ayuda', icon: Icons.help_outline),
+            const SizedBox(height: 16),
           ],
         ),
-        child: message.isUser 
-            ? Text(
-                message.text,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(String title, {IconData? icon}) {
+    return ListTile(
+      leading: Icon(icon ?? Icons.chat_bubble_outline, size: 20, color: const Color(0xFF003C9E)),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 14, color: Colors.black87),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: () {
+        if (MediaQuery.of(context).size.width < 800) {
+          Navigator.pop(context);
+        }
+      },
+    );
+  }
+
+  Widget _buildMainContent(bool isDesktop) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            if (!_isChatMode)
+              CustomHeader(
+                onMenuPressed: () {
+                  if (isDesktop) {
+                    setState(() => _isSidebarOpenDesktop = !_isSidebarOpenDesktop);
+                  } else {
+                    _scaffoldKey.currentState?.openDrawer();
+                  }
+                },
               )
-            : _buildBotMessageContent(message),
+            else
+              // Header reducido en modo chat
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                child: Row(
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        return IconButton(
+                          icon: const Icon(Icons.menu, color: Color(0xFF003C9E)),
+                          onPressed: () {
+                            if (isDesktop) {
+                              setState(() => _isSidebarOpenDesktop = !_isSidebarOpenDesktop);
+                            } else {
+                              _scaffoldKey.currentState?.openDrawer();
+                            }
+                          },
+                        );
+                      }
+                    ),
+                    Image.asset(
+                      'assets/images/logo-rectangular.png',
+                      height: 36,
+                    ),
+                  ],
+                ),
+              ),
+            
+            if (!_isChatMode)
+              // Modo centrado (Inicial)
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: _buildInputBox(),
+                  ),
+                ),
+              )
+            else ...[
+              // Modo Chat (Lista de mensajes)
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(top: 20, bottom: 20),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    return _buildChatBubble(_messages[index]);
+                  },
+                ),
+              ),
+              
+              // Buscador en la parte inferior anclado
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: _buildInputBox(),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          // Mantenemos siempre el gradiente principal según requerimiento
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF003C8F), // Dark blue
-              Color(0xFF00ACC1), // Teal/Cyan
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              if (!_isChatMode)
-                const CustomHeader()
-              else
-                // Header reducido en modo chat
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00C8B6),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.accessibility_new, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'YaSÉ',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              
-              if (!_isChatMode)
-                // Modo centrado (Inicial)
-                Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      child: _buildInputBox(),
-                    ),
-                  ),
-                )
-              else ...[
-                // Modo Chat (Lista de mensajes)
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.only(top: 20, bottom: 20),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      return _buildChatBubble(_messages[index]);
-                    },
-                  ),
-                ),
-                
-                // Buscador en la parte inferior anclado
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: _buildInputBox(),
-                ),
-              ],
-            ],
-          ),
-        ),
+      key: _scaffoldKey,
+      drawer: isDesktop ? null : Drawer(child: _buildSidebarContent()),
+      body: Row(
+        children: [
+          if (isDesktop && _isSidebarOpenDesktop)
+            _buildSidebarContent(),
+          Expanded(child: _buildMainContent(isDesktop)),
+        ],
       ),
-      bottomNavigationBar: _isChatMode ? null : BottomNavigationBar(
-        // The bar can be kept on both, but usually hidden in chat
+      bottomNavigationBar: (_isChatMode || isDesktop) ? null : BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF002366),
+        selectedItemColor: const Color(0xFF0047C7),
         unselectedItemColor: Colors.grey.shade500,
         showUnselectedLabels: true,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),

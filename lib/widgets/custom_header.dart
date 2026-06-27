@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 
 class CustomHeader extends StatelessWidget {
-  const CustomHeader({super.key});
+  final VoidCallback? onMenuPressed;
+  
+  const CustomHeader({super.key, this.onMenuPressed});
 
   Widget _buildTopIcon(IconData icon) {
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF5F8FC), // Gris claro fondo
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, color: Colors.white, size: 24),
+      child: Icon(icon, color: const Color(0xFF003C9E), size: 24),
     );
   }
 
@@ -25,25 +27,20 @@ class CustomHeader extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Logo
+              // Logo and Menu
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00C8B6),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.accessibility_new, color: Colors.white, size: 24),
+                  Builder(
+                    builder: (context) {
+                      return IconButton(
+                        icon: const Icon(Icons.menu, color: Color(0xFF003C9E)),
+                        onPressed: onMenuPressed ?? () => Scaffold.of(context).openDrawer(),
+                      );
+                    }
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'YaSÉ',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Image.asset(
+                    'assets/images/logo-rectangular.png',
+                    height: 45,
                   ),
                 ],
               ),
@@ -70,7 +67,7 @@ class CustomHeader extends StatelessWidget {
               Text(
                 'Buenos días 👋',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF003C9E),
                   fontSize: 16,
                 ),
               ),
@@ -78,7 +75,7 @@ class CustomHeader extends StatelessWidget {
               Text(
                 '¿En qué trámite\nte ayudo hoy?',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF003C9E),
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   height: 1.1,

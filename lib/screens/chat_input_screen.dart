@@ -23,9 +23,54 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  List<Map<String, dynamic>> _chatHistory = [];
+  String? _currentSessionId;
+
   @override
   void initState() {
     super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final history = await _apiService.getChatHistory();
+    if (mounted) {
+      setState(() {
+        _chatHistory = history;
+      });
+    }
+  }
+
+  Future<void> _loadSession(String sessionId) async {
+    setState(() {
+      _isLoading = true;
+      _isChatMode = true;
+      _messages.clear();
+      _currentSessionId = sessionId;
+    });
+
+    final msgs = await _apiService.getChatMessages(sessionId);
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        for (var msg in msgs) {
+          final role = msg['role'];
+          final content = msg['content'];
+          final metadata = msg['metadata'];
+          
+          _messages.add(ChatMessage(
+            id: msg['id'],
+            text: content,
+            isUser: role == 'user',
+            steps: metadata?['events'] != null 
+                ? (metadata['events'] as List).map((e) => e['content'].toString()).toList() 
+                : [],
+          ));
+        }
+      });
+      _scrollToBottom();
+    }
   }
   
   void _startStreaming() {
@@ -58,7 +103,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
 
     final botMessage = _messages.last;
 
-    _apiService.streamCitizenshipQuery(query).listen(
+    _apiService.streamCitizenshipQuery(query, _currentSessionId).listen(
       (chunkMap) {
         if (mounted) {
           setState(() {
@@ -72,6 +117,11 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
               botMessage.steps = newSteps;
             } else if (eventName == 'final') {
               botMessage.finalResult = chunkMap;
+              
+              if (chunkMap['sessionId'] != null) {
+                _currentSessionId = chunkMap['sessionId'].toString();
+              }
+              
               final summaryStr = chunkMap['summary']?.toString() ?? '';
               
               // Limpiar posibles bloques de markdown que el LLM suele agregar (ej: ```json ... ```)
@@ -126,6 +176,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
               _isLoading = false;
             } else if (eventName == 'done') {
               _isLoading = false;
+              _loadHistory(); // Refrescar el historial al terminar
             } else {
                // Fallback just in case
                if (chunkMap.containsKey('rawText')) {
@@ -508,6 +559,7 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
                     _messages.clear();
                     _isChatMode = false;
                     _queryController.clear();
+                    _currentSessionId = null;
                   });
                   if (MediaQuery.of(context).size.width < 800) {
                     Navigator.pop(context);
@@ -541,11 +593,25 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
-                children: [
-                  _buildDrawerItem('¿Cómo obtener la visa?'),
-                  _buildDrawerItem('Requisitos para pasaporte'),
-                  _buildDrawerItem('Pago de impuestos 2024'),
-                ],
+                children: _chatHistory.isEmpty
+                    ? [
+                        const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('No hay chats recientes.', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        )
+                      ]
+                    : _chatHistory.map((session) {
+                        final title = session['firstMessage']?.toString() ?? 'Nuevo chat';
+                        final sessionId = session['sessionId']?.toString() ?? '';
+                        return _buildDrawerItem(
+                          title,
+                          onTapAction: () {
+                            if (sessionId.isNotEmpty) {
+                              _loadSession(sessionId);
+                            }
+                          },
+                        );
+                      }).toList(),
               ),
             ),
             const Divider(),

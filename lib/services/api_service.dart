@@ -1,16 +1,27 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
   static const String _baseUrl = 'http://127.0.0.1:3000';
 
-  Stream<Map<String, dynamic>> streamCitizenshipQuery(String query) async* {
+  Stream<Map<String, dynamic>> streamCitizenshipQuery(String query, [String? sessionId]) async* {
     final client = http.Client();
     try {
       final url = Uri.parse('$_baseUrl/citizenship/query/stream');
+      final bodyData = {'query': query};
+      if (sessionId != null) {
+        bodyData['sessionId'] = sessionId;
+      }
       final request = http.Request('POST', url)
         ..headers['Content-Type'] = 'application/json'
-        ..body = jsonEncode({'query': query});
+        ..body = jsonEncode(bodyData);
+      
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final token = await user.getIdToken();
+        request.headers['Authorization'] = 'Bearer $token';
+      }
       
       final response = await client.send(request);
       
@@ -41,5 +52,41 @@ class ApiService {
     } finally {
       client.close();
     }
+  }
+
+  Future<List<Map<String, dynamic>>> getChatHistory() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+    
+    final token = await user.getIdToken();
+    final url = Uri.parse('$_baseUrl/conversations');
+    final response = await http.get(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+    
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> getChatMessages(String sessionId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return [];
+    
+    final token = await user.getIdToken();
+    final url = Uri.parse('$_baseUrl/conversations/$sessionId/messages');
+    final response = await http.get(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+    
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
   }
 }

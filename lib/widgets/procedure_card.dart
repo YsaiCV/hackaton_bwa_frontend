@@ -14,6 +14,21 @@ class ProcedureDocument {
   final bool requiresRequestLetter;
   final List<Map<String, String>> requestLetterFields;
 
+  static const List<Map<String, String>> standardLetterFields = [
+    {'name': 'ciudad', 'label': 'Ciudad'},
+    {'name': 'fecha', 'label': 'Fecha (ej: 10 de Octubre de 2024)'},
+    {'name': 'destinatarioTitulo', 'label': 'Título del destinatario (ej: Señor)'},
+    {'name': 'destinatarioNombre', 'label': 'Nombre del destinatario'},
+    {'name': 'destinatarioCargo', 'label': 'Cargo del destinatario'},
+    {'name': 'referencia', 'label': 'Referencia o motivo de la carta'},
+    {'name': 'saludo', 'label': 'Saludo (ej: De mi mayor consideración:)'},
+    {'name': 'cuerpo', 'label': 'Cuerpo explicativo de la solicitud'},
+    {'name': 'despedida', 'label': 'Despedida (ej: Atentamente,)'},
+    {'name': 'remitenteNombre', 'label': 'Nombre del solicitante'},
+    {'name': 'remitenteReg', 'label': 'Registro / Matrícula (Opcional)'},
+    {'name': 'remitenteCI', 'label': 'C.I. del solicitante'}
+  ];
+
   ProcedureDocument({
     required this.name,
     this.requiresRequestLetter = false,
@@ -24,15 +39,18 @@ class ProcedureDocument {
     if (json is String) {
       return ProcedureDocument(name: json);
     }
+    final bool requiresRequestLetter = json['requiresRequestLetter'] ?? false;
     return ProcedureDocument(
       name: json['name'] ?? 'Documento',
-      requiresRequestLetter: json['requiresRequestLetter'] ?? false,
-      requestLetterFields: (json['requestLetterFields'] as List?)
-          ?.map((e) => {
-                'name': e['name']?.toString() ?? '',
-                'label': e['label']?.toString() ?? '',
-              })
-          .toList() ?? [],
+      requiresRequestLetter: requiresRequestLetter,
+      requestLetterFields: requiresRequestLetter
+          ? standardLetterFields
+          : (json['requestLetterFields'] as List?)
+              ?.map((e) => {
+                    'name': e['name']?.toString() ?? '',
+                    'label': e['label']?.toString() ?? '',
+                  })
+              .toList() ?? [],
     );
   }
 }

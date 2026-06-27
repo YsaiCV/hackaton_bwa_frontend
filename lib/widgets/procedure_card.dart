@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -223,15 +224,28 @@ class ProcedureCard extends StatelessWidget {
             ),
           ],
           
-          if (data.hasDownloadableDocs || data.hasDynamicFill)
-            Container(
-              padding: const EdgeInsets.all(20),
-              color: const Color(0xFFF9FBFF),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (data.hasDownloadableDocs)
-                    OutlinedButton.icon(
+          Container(
+            padding: const EdgeInsets.all(20),
+            color: const Color(0xFFF9FBFF),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _downloadProcedureSummary(context, data),
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text('Descargar resumen en PDF'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF003C9E),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                if (data.hasDownloadableDocs || data.hasDynamicFill)
+                  const SizedBox(height: 12),
+                if (data.hasDownloadableDocs)
+                  OutlinedButton.icon(
                       onPressed: () async {
                         try {
                           final uri = Uri.parse('http://127.0.0.1:3000/documents/test-form');
@@ -312,6 +326,59 @@ class ProcedureCard extends StatelessWidget {
     );
   }
 
+  Future<void> _downloadProcedureSummary(BuildContext context, ProcedureData data) async {
+    try {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Generando resumen en PDF...')),
+        );
+      }
+      
+      final payload = {
+        "title": data.title,
+        "institution": data.institution,
+        "cost": data.cost,
+        "time": data.time,
+        "modality": data.modality,
+        "steps": data.steps,
+        "documents": data.documents.map((d) => d.name).toList(),
+        "recommendations": data.recommendations,
+        "whereToDoIt": data.whereToDoIt
+      };
+
+      final uri = Uri.parse('http://127.0.0.1:3000/documents/generate-procedure');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (kIsWeb) {
+          final blob = html.Blob([response.bodyBytes], 'application/pdf');
+          final url = html.Url.createObjectUrlFromBlob(blob);
+          final anchor = html.AnchorElement(href: url)
+            ..setAttribute('download', 'resumen_tramite.pdf')
+            ..click();
+          html.Url.revokeObjectUrl(url);
+        } else {
+          final dir = await getTemporaryDirectory();
+          final file = File('${dir.path}/resumen_tramite.pdf');
+          await file.writeAsBytes(response.bodyBytes);
+          OpenFile.open(file.path);
+        }
+      } else {
+        throw Exception('Error del servidor al generar resumen');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo descargar el resumen')),
+        );
+      }
+    }
+  }
+
   Widget _buildChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -382,12 +449,46 @@ class ProcedureCard extends StatelessWidget {
         children: [
           const Text('• ', style: TextStyle(color: Color(0xFF00B8B8), fontSize: 18, fontWeight: FontWeight.bold)),
           Expanded(
-            child: Text(
+            child: _buildMarkdownText(
               text,
-              style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.4),
+              const TextStyle(color: Colors.black87, fontSize: 14, height: 1.4),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMarkdownText(String text, TextStyle baseStyle) {
+    final RegExp exp = RegExp(r'\*\*(.*?)\*\*');
+    final matches = exp.allMatches(text);
+    
+    if (matches.isEmpty) {
+      return Text(text, style: baseStyle);
+    }
+    
+    int current = 0;
+    List<TextSpan> spans = [];
+    
+    for (final match in matches) {
+      if (match.start > current) {
+        spans.add(TextSpan(text: text.substring(current, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(1),
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ));
+      current = match.end;
+    }
+    
+    if (current < text.length) {
+      spans.add(TextSpan(text: text.substring(current)));
+    }
+    
+    return RichText(
+      text: TextSpan(
+        style: baseStyle,
+        children: spans,
       ),
     );
   }

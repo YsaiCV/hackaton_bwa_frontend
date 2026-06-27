@@ -8,6 +8,7 @@ class ChatMessage {
   List<String> steps;
   Map<String, dynamic>? finalResult;
   ProcedureData? procedureData;
+  Map<String, dynamic>? procedureList;
   String? error;
 
   ChatMessage({
@@ -17,6 +18,7 @@ class ChatMessage {
     this.steps = const [],
     this.finalResult,
     this.procedureData,
+    this.procedureList,
     this.error,
   });
 }

@@ -86,30 +86,33 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
 
               if (cleanStr.startsWith('{')) {
                 try {
-                  // The summary string is now a JSON returned by the new Prompt
                   final dataMap = jsonDecode(cleanStr);
-                  botMessage.procedureData = ProcedureData(
-                    title: dataMap['title'] ?? 'Trámite',
-                    institution: dataMap['institution'] ?? '',
-                    cost: dataMap['cost'] ?? '',
-                    time: dataMap['time'] ?? '',
-                    modality: dataMap['modality'] ?? '',
-                    iconEmoji: dataMap['iconEmoji'] ?? '📄',
-                    steps: List<String>.from(dataMap['steps'] ?? []),
-                    documents: (dataMap['documents'] as List?)
-                        ?.map((e) => ProcedureDocument.fromJson(e))
-                        .toList() ?? [],
-                    recommendations: List<String>.from(dataMap['recommendations'] ?? []),
-                    whoCanDoIt: dataMap['whoCanDoIt'] ?? '',
-                    whoCanDoItSubtitle: dataMap['whoCanDoItSubtitle'] ?? '',
-                    whereToDoIt: List<String>.from(dataMap['whereToDoIt'] ?? []),
-                    sources: (dataMap['sources'] as List?)?.map<Map<String, String>>((s) => {
-                      'title': s['title']?.toString() ?? '',
-                      'url': s['url']?.toString() ?? ''
-                    }).toList() ?? <Map<String, String>>[],
-                    hasDownloadableDocs: dataMap['hasDownloadableDocs'] ?? false,
-                    hasDynamicFill: dataMap['hasDynamicFill'] ?? false,
-                  );
+                  if (dataMap['type'] == 'procedure_list') {
+                    botMessage.procedureList = dataMap;
+                  } else {
+                    botMessage.procedureData = ProcedureData(
+                      title: dataMap['title'] ?? 'Trámite',
+                      institution: dataMap['institution'] ?? '',
+                      cost: dataMap['cost'] ?? '',
+                      time: dataMap['time'] ?? '',
+                      modality: dataMap['modality'] ?? '',
+                      iconEmoji: dataMap['iconEmoji'] ?? '📄',
+                      steps: List<String>.from(dataMap['steps'] ?? []),
+                      documents: (dataMap['documents'] as List?)
+                          ?.map((e) => ProcedureDocument.fromJson(e))
+                          .toList() ?? [],
+                      recommendations: List<String>.from(dataMap['recommendations'] ?? []),
+                      whoCanDoIt: dataMap['whoCanDoIt'] ?? '',
+                      whoCanDoItSubtitle: dataMap['whoCanDoItSubtitle'] ?? '',
+                      whereToDoIt: List<String>.from(dataMap['whereToDoIt'] ?? []),
+                      sources: (dataMap['sources'] as List?)?.map<Map<String, String>>((s) => {
+                        'title': s['title']?.toString() ?? '',
+                        'url': s['url']?.toString() ?? ''
+                      }).toList() ?? <Map<String, String>>[],
+                      hasDownloadableDocs: dataMap['hasDownloadableDocs'] ?? false,
+                      hasDynamicFill: dataMap['hasDynamicFill'] ?? false,
+                    );
+                  }
                 } catch (e) {
                   // Fallback: If parsing fails, it will render raw summary text and show error
                   print('Error parsing JSON from summary: $e');
@@ -215,6 +218,10 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
       );
     }
 
+    if (message.procedureList != null) {
+      return _buildProcedureListUI(message.procedureList!);
+    }
+
     if (message.procedureData != null) {
       return ProcedureCard(data: message.procedureData!);
     }
@@ -302,6 +309,69 @@ class _ChatInputScreenState extends State<ChatInputScreen> {
         ),
         SizedBox(width: 12),
         Text('Iniciando...', style: TextStyle(color: Colors.black54, fontStyle: FontStyle.italic, fontSize: 14)),
+      ],
+    );
+  }
+
+  Widget _buildProcedureListUI(Map<String, dynamic> data) {
+    final summary = data['summary']?.toString() ?? 'Estos son los trámites requeridos:';
+    final procedures = (data['procedures'] as List?) ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          summary,
+          style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 12),
+        ...procedures.map((proc) {
+          final title = proc['title']?.toString() ?? '';
+          final description = proc['description']?.toString() ?? '';
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  _queryController.text = title;
+                  _startStreaming();
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: const Color(0xFF00B8B8).withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.description_outlined, color: Color(0xFF003C9E)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF003C9E))),
+                            if (description.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(description, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
